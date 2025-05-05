@@ -1,0 +1,265 @@
+---
+title: "Bioinformática - Seminário"
+subtitle: "Introdução a Modelagem"
+output: 
+  html_document: 
+    toc: true
+    toc_depth: 4
+    keep_md: true
+    code_folding: "hide"    
+editor_options: 
+  chunk_output_type: console
+---
+
+Every analysis above were execute using the language `r R.version$version.string` and o software IDE (Integrated Development Environment) RStudio. Also the reports in format PDF was development for library `rmarkdown`.
+
+Welinton Yoshio Hirai^[wyhirai@gmail.com]
+
+```{r setup, include=F}
+#clear environment
+rm(list=ls(all=T))
+
+# Hospital de Amor [https://hospitaldeamor.com.br/site/]
+# Núcleo de Epidemiologia e Bioestatística (NEB) [https://iep.hospitaldeamor.com.br/plataformas-de-apoio/neb/]
+# Bioestatístico: Welinton Yoshio Hirai [welinton.hirai@hospitaldeamor.com.br]
+
+#dir
+
+#library
+library(magrittr)
+library(dplyr)
+library(ggplot2)
+
+#set dir
+setwd("C:/Users/HANEB02/Downloads")
+```
+
+# Modelo 1
+
+```{r}
+# Simulation data 1 -------------------------------------------------------
+set.seed(2025)
+pred1_simu <- runif(100, min = 0, max = 100)
+error_simu <- rnorm(100, mean = 0, sd = 25)
+beta0 = 20
+beta1 = -37
+
+resp_calc <- beta0 + beta1*pred1_simu + error_simu
+
+datafull <- data.frame(
+  resp_calc, 
+  pred1_simu
+)
+```
+
+## Descritivo
+
+```{r}
+summary(datafull)
+```
+
+```{r}
+datafull %>% 
+  ggplot(aes(x = pred1_simu, y = resp_calc)) +
+  geom_point()
+```
+
+## Modelagem 
+
+```{r}
+model1_fit <- lm(resp_calc ~ pred1_simu, data = datafull)
+
+summary(model1_fit)
+```
+
+## Calculado
+
+```{r}
+#calculo para beta1
+num_cal = sum(datafull$resp_calc * datafull$pred1_simu) - (sum(datafull$resp_calc) * sum(datafull$pred1_simu))/100
+den_cal = sum(datafull$pred1_simu^2) - (sum(datafull$pred1_simu)^2/100)
+beta1_cal = num_cal/den_cal
+paste('Beta 1 calculado')
+beta1_cal
+```
+
+```{r}
+#calculo para beta0
+beta0_cal = mean(datafull$resp_calc) - beta1_cal * mean(datafull$pred1_simu)
+paste('Beta 0 calculado')
+beta0_cal
+```
+
+```{r}
+#desvios
+# datafull$resp_calc - predict(model1_fit)
+# residuals(model1_fit)
+
+#estimando a variância dos resíduos
+sum(residuals(model1_fit)^2) / (100 - 2)
+sqrt(sum(residuals(model1_fit)^2) / (100 - 2))
+```
+
+---
+
+\newpage 
+
+# Modelo 2
+
+```{r}
+# Simulation data 2 -------------------------------------------------------
+set.seed(2025)
+pred1_simu <- runif(100, min = 0, max = 100)
+pred2_simu <- rpois(100, lambda = 30)
+error_simu <- rnorm(100, mean = 0, sd = 25)
+beta0 = 20
+beta1 = -37
+beta2 = 16
+
+resp_calc <- beta0 + beta1*pred1_simu + beta2*pred2_simu + error_simu
+
+datafull <- data.frame(
+  resp_calc, 
+  pred1_simu,
+  pred2_simu,
+  error_simu
+)
+```
+
+## Descritivo
+
+```{r}
+summary(datafull)
+```
+
+```{r}
+datafull %>% 
+  ggplot(aes(x = pred1_simu, 
+             y = pred2_simu,
+             size = resp_calc)) +
+  geom_point(alpha = .8)
+```
+
+## Modelagem
+
+```{r}
+model2_fit <- lm(resp_calc ~ pred1_simu + pred2_simu, data = datafull)
+
+summary(model2_fit)
+```
+
+## Calculado
+
+```{r}
+XMatriz <- data.frame(
+  X0 = rep(1, 100),
+  X1 = datafull$pred1_simu,
+  X2 = datafull$pred2_simu
+) %>% as.matrix()
+
+head(XMatriz)
+
+YMatrix = as.vector(datafull$resp_calc)
+```
+
+```{r}
+#calculado os parâmetros
+t(XMatriz) %*% XMatriz
+solve(t(XMatriz) %*% XMatriz)
+solve(t(XMatriz) %*% XMatriz) %*% t(XMatriz) %*% YMatrix
+```
+
+```{r}
+#calculado os valores preditos
+Y_Pred = XMatriz %*% solve(t(XMatriz) %*% XMatriz) %*% t(XMatriz) %*% YMatrix
+Y_Pred
+predict(model2_fit)
+```
+
+```{r}
+#estimando a variância dos resíduos
+desvio_cal <- datafull$resp_calc - predict(model2_fit)
+
+residuals(model2_fit)
+sum(desvio_cal^2) / (100 - 2)
+sqrt(sum(desvio_cal^2) / (100 - 3))
+```
+
+```{r}
+data.frame(
+  datafull,
+  predict = predict(model2_fit)
+) %>% 
+  tidyr::pivot_longer(cols = c(resp_calc, predict)) %>% 
+  ggplot(aes(x = pred1_simu, 
+             y = pred2_simu,
+             col = name,
+             size = value,
+             shape = name)) +
+  geom_point(alpha = .8) 
+```
+
+---
+
+\newpage 
+
+<!-- # Modelo 3 -->
+
+<!-- ```{r} -->
+<!-- # Simulation data 2 ------------------------------------------------------- -->
+<!-- set.seed(2025) -->
+<!-- pred1_simu <- rep(c('Case', 'Control'), each = 10) -->
+<!-- resp_case <- rnorm(10, mean = 20, sd = 10) -->
+<!-- resp_control <- rnorm(10, mean = 40, sd = 10) -->
+
+<!-- datafull <- data.frame( -->
+<!--   resp_calc = c(resp_case, resp_control),  -->
+<!--   pred1_simu -->
+<!-- ) -->
+<!-- ``` -->
+
+<!-- ## Descritivo -->
+
+<!-- ```{r} -->
+<!-- aggregate(. ~ pred1_simu, datafull, mean) -->
+<!-- ``` -->
+
+<!-- ## Modelagem -->
+
+<!-- ```{r} -->
+<!-- model3_fit <- lm(resp_calc ~ pred1_simu, data = datafull) -->
+<!-- summary(model3_fit) -->
+<!-- ``` -->
+
+<!-- ## Calculado -->
+
+<!-- ```{r} -->
+<!-- #calculado os parâmetros -->
+<!-- XMatriz <- model.matrix(~ pred1_simu, data = datafull) -->
+<!-- YMatrix <- datafull$resp_calc -->
+
+<!-- t(XMatriz) %*% XMatriz -->
+<!-- solve(t(XMatriz) %*% XMatriz) -->
+<!-- solve(t(XMatriz) %*% XMatriz) %*% t(XMatriz) %*% YMatrix -->
+
+<!-- 40.5 - 23.6 -->
+<!-- ``` -->
+
+<!-- ## Modelagem -->
+
+<!-- ```{r} -->
+<!-- model4_fit <- lm(resp_calc ~ 0 + pred1_simu, data = datafull) -->
+<!-- summary(model4_fit) -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- #calculado os parâmetros -->
+<!-- XMatriz <- model.matrix(~ 0 + pred1_simu, data = datafull) -->
+<!-- YMatrix <- datafull$resp_calc -->
+
+<!-- t(XMatriz) %*% XMatriz -->
+<!-- solve(t(XMatriz) %*% XMatriz) -->
+<!-- solve(t(XMatriz) %*% XMatriz) %*% t(XMatriz) %*% YMatrix -->
+<!-- ``` -->
+
+
