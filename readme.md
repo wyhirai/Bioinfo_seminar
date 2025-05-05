@@ -1,7 +1,7 @@
 # Informações Iniciais
-Construção do seminário para apresentação do grupo de Bioinformática - HA.
+Construção do seminário para apresentação do grupo de Bioinformática - HA (Barretos - SP).
+
 Data de construção: 05/05/2025
-Última data de modificação: 05/05/2025
 
 # Apresentação
 ## Sumário:
